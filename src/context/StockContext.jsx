@@ -7,6 +7,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { INITIAL_STOCKS, MARKET_HEALTH_DATA, MOCK_ADMIN_USERS, MOCK_NEWS, MOCK_BROADCASTS } from '../data/mockData';
 import confetti from 'canvas-confetti';
 import {
+  playTouchTone,
   playTrainStationChime,
   getStockAdvicePhrase,
   getTrainStationAnnouncement,
@@ -22,6 +23,9 @@ const StockContext = createContext(null);
 export const StockProvider = ({ children }) => {
   // USD to INR conversion rate
   const USD_TO_INR = 84.50;
+
+  // Spoken text subtitle for visual + audible sync
+  const [currentSpokenText, setCurrentSpokenText] = useState(null);
 
   // Multilingual State: 'en' | 'hi' | 'ta'
   const [language, setLanguageState] = useState(() => {
@@ -303,6 +307,9 @@ export const StockProvider = ({ children }) => {
   };
 
   const speakText = (text, id, customLang = null) => {
+    // 1. Play immediate touch tone for instant auditory feedback
+    playTouchTone();
+
     if (!('speechSynthesis' in window)) {
       console.warn('Speech synthesis not supported in this browser.');
       alert("Voice speech audio: " + text);
@@ -313,17 +320,25 @@ export const StockProvider = ({ children }) => {
       window.speechSynthesis.cancel();
       setSpeakingId(null);
       setIsSpeaking(false);
+      setCurrentSpokenText(null);
       return;
     }
 
-    window.speechSynthesis.cancel(); // Stop any previous speech
+    // Cancel any previous utterance
+    window.speechSynthesis.cancel();
+
+    // Chromium speech engine wake-up / resume
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
 
     const activeLang = customLang || language;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.95;
     utterance.pitch = 1.0;
+    utterance.volume = 1.0;
 
-    // Set correct language code
+    // Set correct BCP-47 language code
     if (activeLang === 'hi') {
       utterance.lang = 'hi-IN';
     } else if (activeLang === 'ta') {
@@ -340,25 +355,39 @@ export const StockProvider = ({ children }) => {
         utterance.voice = matched;
       }
     } catch {
-      // Fallback to default voice
+      // Fallback
     }
 
     utterance.onstart = () => {
       setSpeakingId(id);
       setIsSpeaking(true);
+      setCurrentSpokenText(text);
     };
 
     utterance.onend = () => {
       setSpeakingId(null);
       setIsSpeaking(false);
+      setCurrentSpokenText(null);
     };
 
-    utterance.onerror = () => {
+    utterance.onerror = (e) => {
+      console.warn("Speech synthesis error or interrupted:", e);
       setSpeakingId(null);
       setIsSpeaking(false);
+      setCurrentSpokenText(null);
     };
 
-    window.speechSynthesis.speak(utterance);
+    // 40ms timeout ensures Chrome's cancel() completes before speak() executes
+    setTimeout(() => {
+      try {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.error("Speech speak failed:", err);
+      }
+    }, 45);
   };
 
   // "Train-Station Announcer" Mode (every ~24s when active)
@@ -650,11 +679,34 @@ export const StockProvider = ({ children }) => {
         setIsLiveAnnouncerActive,
         toggleLiveAnnouncer: () => setIsLiveAnnouncerActive(a => !a),
         SUPPORTED_LANGUAGES,
+        currentSpokenText,
         priceFlashes,
         lastMarketUpdate
       }}
     >
       {children}
+
+      {/* Real-Time Live Voice Subtitle Bar & Soundwave Visualizer */}
+      {currentSpokenText && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-xl w-[92%] sm:w-auto bg-[#0F172A]/95 text-white backdrop-blur-md px-5 py-3.5 rounded-2xl shadow-2xl border border-blue-500/40 flex items-center space-x-3.5">
+          <div className="flex items-center space-x-1">
+            <span className="w-1.5 h-4 bg-emerald-400 rounded-full animate-pulse"></span>
+            <span className="w-1.5 h-6 bg-amber-400 rounded-full animate-bounce"></span>
+            <span className="w-1.5 h-3 bg-blue-400 rounded-full animate-pulse"></span>
+          </div>
+          <div className="flex-1 text-xs sm:text-sm font-bold text-slate-100 line-clamp-2">
+            <span className="text-amber-400 font-extrabold mr-1.5">🔊 Live Voice:</span>
+            "{currentSpokenText}"
+          </div>
+          <button
+            onClick={stopSpeaking}
+            className="px-2.5 py-1 text-[11px] font-black bg-rose-500 hover:bg-rose-600 text-white rounded-lg transition-colors ml-2 touch-target"
+            title="Stop audio playback"
+          >
+            Stop
+          </button>
+        </div>
+      )}
     </StockContext.Provider>
   );
 };

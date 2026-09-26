@@ -1,7 +1,26 @@
-// =========================================================================
-// StockSense Multilingual Translation & Train-Station Announcer Engine
-// Supports: English (en-IN), Hindi (hi-IN), Tamil (ta-IN)
-// =========================================================================
+// Play a short pleasant click/beep tone on touch to unlock audio and confirm interaction
+export const playTouchTone = () => {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(659.25, ctx.currentTime); // E5 pleasant ping
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.15);
+  } catch (e) {
+    // Audio unlock fallback
+  }
+};
 
 // Play a pleasant train-station / transit PA announcement chime using Web Audio API
 export const playTrainStationChime = () => {
@@ -9,6 +28,9 @@ export const playTrainStationChime = () => {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
     const ctx = new AudioContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
 
     const playTone = (freq, startTime, duration) => {
       const osc = ctx.createOscillator();
@@ -35,6 +57,8 @@ export const playTrainStationChime = () => {
     console.warn('AudioContext not supported or permitted yet:', e);
   }
 };
+
+
 
 // Language configurations and voice locators
 export const SUPPORTED_LANGUAGES = [
