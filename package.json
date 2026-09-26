@@ -10,8 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.10",
     "@supabase/supabase-js": "^2.117.2",
     "canvas-confetti": "^1.9.4",
+    "framer-motion": "^13.4.4",
     "lucide-react": "^1.48.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

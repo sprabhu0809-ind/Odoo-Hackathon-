@@ -17,6 +17,8 @@ import {
   DollarSign,
   Type,
   X,
+  Radio,
+  Volume2,
   Megaphone,
   User
 } from 'lucide-react';
@@ -42,6 +44,11 @@ export const Navbar = () => {
     isSpeaking,
     isLiveTickerActive,
     toggleLiveTicker,
+    language,
+    setLanguage,
+    isLiveAnnouncerActive,
+    toggleLiveAnnouncer,
+    SUPPORTED_LANGUAGES,
     lastMarketUpdate
   } = useStock();
 
@@ -76,7 +83,7 @@ export const Navbar = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
+      recognition.lang = language === 'hi' ? 'hi-IN' : language === 'ta' ? 'ta-IN' : 'en-IN';
       recognition.start();
       setIsVoiceListening(true);
 
@@ -105,7 +112,12 @@ export const Navbar = () => {
     } else {
       // Mock Voice Search prompt
       setIsVoiceListening(true);
-      speakText("Voice search ready. Say a stock name like Apple, Tesla, or Reliance.", "voice-search-prompt");
+      const promptText = language === 'hi'
+        ? "वॉयस सर्च तैयार है। किसी शेयर का नाम बोलें।"
+        : language === 'ta'
+        ? "குரல் தேடல் தயார். ஒரு பங்கின் பெயரை சொல்லுங்கள்."
+        : "Voice search ready. Say a stock name like Apple, Tesla, or Reliance.";
+      speakText(promptText, "voice-search-prompt", language);
       setTimeout(() => {
         setIsVoiceListening(false);
         setSearchQuery('AAPL');
@@ -269,6 +281,38 @@ export const Navbar = () => {
                 <span>Pro</span>
               </button>
             </div>
+
+            {/* 3-WAY MULTILINGUAL VOICE SWITCH (EN / HI / TA) */}
+            <div className="flex items-center space-x-0.5 bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner" title="Choose AI voice & advice language">
+              {SUPPORTED_LANGUAGES.map(langItem => (
+                <button
+                  key={langItem.code}
+                  onClick={() => setLanguage(langItem.code)}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all touch-target ${
+                    language === langItem.code
+                      ? 'bg-brand-900 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title={`Switch AI voice and advice to ${langItem.label}`}
+                >
+                  <span>{langItem.short}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* LIVE MARKET ANNOUNCER (TRAIN-STATION PA CHIME + PERIODIC VOICE) */}
+            <button
+              onClick={toggleLiveAnnouncer}
+              className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all touch-target ${
+                isLiveAnnouncerActive
+                  ? 'bg-amber-100 text-amber-900 border-amber-300 ring-2 ring-amber-400 shadow-sm'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+              }`}
+              title="Station PA Announcer: plays chime and speaks live price updates every 25s"
+            >
+              <Radio className={`w-3.5 h-3.5 ${isLiveAnnouncerActive ? 'text-amber-600 animate-pulse' : 'text-slate-500'}`} />
+              <span className="hidden xl:inline">{isLiveAnnouncerActive ? 'PA Active' : 'Live PA'}</span>
+            </button>
 
             {/* Currency Toggle ($ / ₹) */}
             <button

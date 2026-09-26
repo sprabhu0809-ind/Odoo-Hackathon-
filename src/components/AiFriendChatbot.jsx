@@ -22,7 +22,8 @@ export const AiFriendChatbot = () => {
     isSpeaking,
     speakingId,
     formatStockPrice,
-    currency
+    currency,
+    language
   } = useStock();
 
   const [messages, setMessages] = useState([
@@ -75,12 +76,26 @@ export const AiFriendChatbot = () => {
 
     if (matchedStock) {
       const livePriceFormatted = formatStockPrice(matchedStock);
-      const direction = matchedStock.isPositive ? 'up' : 'down';
-      const absChange = Math.abs(matchedStock.changePercent);
+      const isUp = matchedStock.isPositive;
+      const absChange = Math.abs(matchedStock.changePercent).toFixed(2);
+      const direction = isUp
+        ? (language === 'hi' ? 'ऊपर' : language === 'ta' ? 'ஏற்றம்' : 'up')
+        : (language === 'hi' ? 'नीचे' : language === 'ta' ? 'இறக்கம்' : 'down');
 
-      const reply = `**${matchedStock.name} (${matchedStock.symbol})** is trading at **${livePriceFormatted}** right now, ${direction} **${absChange}%** today.\n\n• **Status**: ${matchedStock.trafficLightIcon} ${matchedStock.trafficLightLabel} (${matchedStock.aiScore}% AI score)\n• **Verdict**: ${matchedStock.simpleVerdict}`;
+      let reply = `**${matchedStock.name} (${matchedStock.symbol})** is trading at **${livePriceFormatted}** right now, ${direction} **${absChange}%** today.\n\n• **Status**: ${matchedStock.trafficLightIcon} ${matchedStock.trafficLightLabel} (${matchedStock.aiScore}% AI score)\n• **Verdict**: ${matchedStock.simpleVerdict}`;
 
-      const speechText = `${matchedStock.name} is trading at ${livePriceFormatted} right now, ${direction} ${absChange} percent today. Our AI gives it a ${matchedStock.aiScore} percent score with ${matchedStock.trafficLightLabel} status. ${matchedStock.simpleVerdict}`;
+      if (language === 'hi') {
+        reply = `**${matchedStock.name} (${matchedStock.symbol})** वर्तमान में **${livePriceFormatted}** पर है, आज **${absChange}%** ${direction} है।\n\n• **दर्जा**: ${matchedStock.trafficLightIcon} ${matchedStock.trafficLightLabel} (${matchedStock.aiScore}% AI स्कोर)\n• **सलाह**: ${matchedStock.simpleVerdict}`;
+      } else if (language === 'ta') {
+        reply = `**${matchedStock.name} (${matchedStock.symbol})** தற்போது **${livePriceFormatted}** விலையில் வர்த்தகமாகிறது, இன்று **${absChange}%** ${direction} கண்டுள்ளது.\n\n• **நிலை**: ${matchedStock.trafficLightIcon} ${matchedStock.trafficLightLabel} (${matchedStock.aiScore}% AI மதிப்பீடு)\n• **முடிவு**: ${matchedStock.simpleVerdict}`;
+      }
+
+      let speechText = `${matchedStock.name} is trading at ${livePriceFormatted} right now, ${direction} ${absChange} percent today. Our AI gives it a ${matchedStock.aiScore} percent score with ${matchedStock.trafficLightLabel} status. ${matchedStock.simpleVerdict}`;
+      if (language === 'hi') {
+        speechText = `${matchedStock.name} अभी ${livePriceFormatted} पर कारोबार कर रहा है, ${absChange} प्रतिशत ${direction} है। हमारा एआई इसे ${matchedStock.aiScore} प्रतिशत स्कोर देता है। ${matchedStock.simpleVerdict}`;
+      } else if (language === 'ta') {
+        speechText = `${matchedStock.name} தற்போது ${livePriceFormatted} விலையில் உள்ளது, ${absChange} சதவீதம் ${direction} கண்டுள்ளது. எங்கள் ஏஐ இதற்கு ${matchedStock.aiScore} சதவீதம் மதிப்பீடு வழங்குகிறது। ${matchedStock.simpleVerdict}`;
+      }
 
       return {
         reply,
@@ -140,25 +155,35 @@ export const AiFriendChatbot = () => {
       setMessages(prev => [...prev, botMsg]);
       setIsTyping(false);
 
-      // Automatically speak the response aloud using Web Speech API
-      speakText(response.speechText, `chat-${msgId}`);
+      // Automatically speak the response aloud using Web Speech API in active language
+      speakText(response.speechText, `chat-${msgId}`, language);
     }, 1100);
   };
 
-  // Replay speech for a message (dynamically re-reads live price if linked to a stock)
+  // Replay speech for a message (dynamically re-reads live price in active language)
   const handleReplaySpeech = (msg) => {
     if (msg.stockId) {
       const currentStock = stocks.find(s => s.id === msg.stockId);
       if (currentStock) {
         const livePriceFormatted = formatStockPrice(currentStock);
-        const direction = currentStock.isPositive ? 'up' : 'down';
-        const absChange = Math.abs(currentStock.changePercent);
-        const liveText = `${currentStock.name} is trading at ${livePriceFormatted} right now, ${direction} ${absChange} percent today. Our AI gives it a ${currentStock.aiScore} percent score with ${currentStock.trafficLightLabel} status. ${currentStock.simpleVerdict}`;
-        speakText(liveText, `chat-${msg.id}`);
+        const isUp = currentStock.isPositive;
+        const absChange = Math.abs(currentStock.changePercent).toFixed(2);
+        const direction = isUp
+          ? (language === 'hi' ? 'ऊपर' : language === 'ta' ? 'ஏற்றம்' : 'up')
+          : (language === 'hi' ? 'नीचे' : language === 'ta' ? 'இறக்கம்' : 'down');
+
+        let liveText = `${currentStock.name} is trading at ${livePriceFormatted} right now, ${direction} ${absChange} percent today. Our AI gives it a ${currentStock.aiScore} percent score with ${currentStock.trafficLightLabel} status. ${currentStock.simpleVerdict}`;
+        if (language === 'hi') {
+          liveText = `${currentStock.name} अभी ${livePriceFormatted} पर कारोबार कर रहा है, ${absChange} प्रतिशत ${direction} है। हमारा एआई इसे ${currentStock.aiScore} प्रतिशत स्कोर देता है। ${currentStock.simpleVerdict}`;
+        } else if (language === 'ta') {
+          liveText = `${currentStock.name} தற்போது ${livePriceFormatted} விலையில் உள்ளது, ${absChange} சதவீதம் ${direction} கண்டுள்ளது. எங்கள் ஏஐ இதற்கு ${currentStock.aiScore} சதவீதம் மதிப்பீடு வழங்குகிறது। ${currentStock.simpleVerdict}`;
+        }
+
+        speakText(liveText, `chat-${msg.id}`, language);
         return;
       }
     }
-    speakText(msg.text.replace(/[*_#•]/g, ''), `chat-${msg.id}`);
+    speakText(msg.text.replace(/[*_#•]/g, ''), `chat-${msg.id}`, language);
   };
 
   return (

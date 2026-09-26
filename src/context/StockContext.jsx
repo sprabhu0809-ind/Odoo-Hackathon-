@@ -6,6 +6,12 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { INITIAL_STOCKS, MARKET_HEALTH_DATA, MOCK_ADMIN_USERS, MOCK_NEWS, MOCK_BROADCASTS } from '../data/mockData';
 import confetti from 'canvas-confetti';
+import {
+  playTrainStationChime,
+  getStockAdvicePhrase,
+  getTrainStationAnnouncement,
+  SUPPORTED_LANGUAGES
+} from '../lib/audioAnnouncer';
 
 // TODO: Replace with Clerk useUser() hook once auth is connected
 // import { useUser } from '@clerk/clerk-react';
@@ -15,6 +21,20 @@ const StockContext = createContext(null);
 export const StockProvider = ({ children }) => {
   // USD to INR conversion rate
   const USD_TO_INR = 84.50;
+
+  // Multilingual State: 'en' | 'hi' | 'ta'
+  const [language, setLanguageState] = useState(() => {
+    return sessionStorage.getItem('stocksense_lang') || 'en';
+  });
+
+  const setLanguage = (langCode) => {
+    setLanguageState(langCode);
+    sessionStorage.setItem('stocksense_lang', langCode);
+  };
+
+  // Train-station PA Announcer mode toggle
+  const [isLiveAnnouncerActive, setIsLiveAnnouncerActive] = useState(false);
+  const announcerIndexRef = useRef(0);
 
   // Initialize stocks with dayOpenPrice and momentum state
   const [stocks, setStocks] = useState(() => {
@@ -255,27 +275,21 @@ export const StockProvider = ({ children }) => {
   }, [isLiveTickerActive, USD_TO_INR]);
 
   // =========================================================================
-  // REAL VOICE & AUDIO MODE (ACTUALLY SPEAKS LIVE CURRENT PRICE & RATE)
+  // MULTILINGUAL VOICE & AUDIO MODE (ACTUALLY SPEAKS IN EN / HI / TA)
   // =========================================================================
-  const speakStockAdvice = (stockOrId) => {
+  const speakStockAdvice = (stockOrId, customLang = null) => {
     const stock = typeof stockOrId === 'string'
       ? stocks.find(s => s.id === stockOrId)
       : stockOrId;
 
     if (!stock) return;
 
-    const currencySymbol = currency === 'INR' ? 'rupees' : 'dollars';
-    const priceValue = currency === 'INR' ? stock.priceINR.toFixed(2) : stock.priceUSD.toFixed(2);
-    const directionWord = stock.isPositive ? 'up' : 'down';
-    const absChangePercent = Math.abs(stock.changePercent);
-
-    // Dynamic phrase speaking LIVE numbers at the exact second the button is pressed
-    const textToSpeak = `${stock.name} is currently ${priceValue} ${currencySymbol}, ${directionWord} ${absChangePercent} percent today. Our AI gives it a ${stock.aiScore} percent score with ${stock.trafficLightLabel} status. ${stock.simpleVerdict}`;
-
-    speakText(textToSpeak, `stock-${stock.id}`);
+    const activeLang = customLang || language;
+    const textToSpeak = getStockAdvicePhrase(stock, activeLang, currency);
+    speakText(textToSpeak, `stock-${stock.id}`, activeLang);
   };
 
-  const speakText = (text, id) => {
+  const speakText = (text, id, customLang = null) => {
     if (!('speechSynthesis' in window)) {
       console.warn('Speech synthesis not supported in this browser.');
       alert("Voice speech audio: " + text);
@@ -291,9 +305,30 @@ export const StockProvider = ({ children }) => {
 
     window.speechSynthesis.cancel(); // Stop any previous speech
 
+    const activeLang = customLang || language;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.95;
     utterance.pitch = 1.0;
+
+    // Set correct language code
+    if (activeLang === 'hi') {
+      utterance.lang = 'hi-IN';
+    } else if (activeLang === 'ta') {
+      utterance.lang = 'ta-IN';
+    } else {
+      utterance.lang = 'en-IN';
+    }
+
+    // Match browser voice if available
+    try {
+      const voices = window.speechSynthesis.getVoices();
+      const matched = voices.find(v => v.lang.toLowerCase().startsWith(activeLang));
+      if (matched) {
+        utterance.voice = matched;
+      }
+    } catch {
+      // Fallback to default voice
+    }
 
     utterance.onstart = () => {
       setSpeakingId(id);
@@ -312,6 +347,30 @@ export const StockProvider = ({ children }) => {
 
     window.speechSynthesis.speak(utterance);
   };
+
+  // "Train-Station Announcer" Mode (every ~24s when active)
+  useEffect(() => {
+    if (!isLiveAnnouncerActive || stocks.length === 0) return;
+
+    const interval = setInterval(() => {
+      // Pick top movers or cycling stocks
+      const moverCandidates = stocks.filter(s => Math.abs(s.changePercent) > 0.4);
+      const pool = moverCandidates.length > 0 ? moverCandidates : stocks;
+      const targetStock = pool[announcerIndexRef.current % pool.length];
+      announcerIndexRef.current += 1;
+
+      // 1. Play soft realistic PA chime first
+      playTrainStationChime();
+
+      // 2. Speak announcement line after chime finishes
+      setTimeout(() => {
+        const line = getTrainStationAnnouncement(targetStock, language, currency);
+        speakText(line, `announcer-${targetStock.id}`, language);
+      }, 600);
+    }, 24000);
+
+    return () => clearInterval(interval);
+  }, [isLiveAnnouncerActive, stocks, language, currency]);
 
   const stopSpeaking = () => {
     if ('speechSynthesis' in window) {
@@ -571,6 +630,12 @@ export const StockProvider = ({ children }) => {
         toggleChatbot: () => setIsChatOpen(o => !o),
         isLiveTickerActive,
         toggleLiveTicker: () => setIsLiveTickerActive(a => !a),
+        language,
+        setLanguage,
+        isLiveAnnouncerActive,
+        setIsLiveAnnouncerActive,
+        toggleLiveAnnouncer: () => setIsLiveAnnouncerActive(a => !a),
+        SUPPORTED_LANGUAGES,
         priceFlashes,
         lastMarketUpdate
       }}
