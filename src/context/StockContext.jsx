@@ -82,6 +82,88 @@ export const StockProvider = ({ children }) => {
   // Selected stock object
   const selectedStock = stocks.find(s => s.id === selectedStockId) || stocks[0];
 
+  // Real-time market ticker state
+  const [isLiveTickerActive, setIsLiveTickerActive] = useState(true);
+  const [priceFlashes, setPriceFlashes] = useState({});
+  const [lastMarketUpdate, setLastMarketUpdate] = useState(() => new Date().toLocaleTimeString());
+
+  // Real-Time Price Fluctuations Effect (Simulates live market trading activity)
+  useEffect(() => {
+    if (!isLiveTickerActive) return;
+
+    const interval = setInterval(() => {
+      // Pick 1 to 3 random stocks to fluctuate
+      const count = Math.floor(Math.random() * 2) + 1;
+      const targetIndices = new Set();
+      while (targetIndices.size < count) {
+        targetIndices.add(Math.floor(Math.random() * stocks.length));
+      }
+
+      const flashes = {};
+      const currentTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      setStocks(prevStocks => {
+        return prevStocks.map((stock, idx) => {
+          if (!targetIndices.has(idx)) return stock;
+
+          // Fluctuate price slightly (-0.35% to +0.35%)
+          const deltaFactor = (Math.random() - 0.48) * 0.007;
+          const oldPrice = stock.priceUSD;
+          const deltaUSD = +(oldPrice * deltaFactor).toFixed(2);
+          const newPriceUSD = Math.max(1, +(oldPrice + deltaUSD).toFixed(2));
+          const isUp = newPriceUSD >= oldPrice;
+
+          flashes[stock.id] = isUp ? 'up' : 'down';
+
+          const newPriceINR = +(newPriceUSD * USD_TO_INR).toFixed(2);
+          const newChange = +(stock.change + deltaUSD).toFixed(2);
+          const newChangePercent = +(stock.changePercent + (deltaFactor * 100)).toFixed(2);
+
+          // Update latest history datapoints in real-time
+          const updatedHistory = { ...stock.history };
+          if (updatedHistory['1D'] && updatedHistory['1D'].length > 0) {
+            const series1D = [...updatedHistory['1D']];
+            const lastPoint = { ...series1D[series1D.length - 1] };
+            lastPoint.price = newPriceUSD;
+            lastPoint.close = newPriceUSD;
+            if (newPriceUSD > lastPoint.high) lastPoint.high = newPriceUSD;
+            if (newPriceUSD < lastPoint.low) lastPoint.low = newPriceUSD;
+            series1D[series1D.length - 1] = lastPoint;
+            updatedHistory['1D'] = series1D;
+          }
+
+          // Update sparkline latest value
+          const updatedSparkline = [...stock.sparkline];
+          updatedSparkline[updatedSparkline.length - 1] = newPriceUSD;
+
+          return {
+            ...stock,
+            priceUSD: newPriceUSD,
+            priceINR: newPriceINR,
+            change: newChange,
+            changePercent: newChangePercent,
+            isPositive: newChange >= 0,
+            sparkline: updatedSparkline,
+            history: updatedHistory,
+            lastTickTime: currentTimeStr
+          };
+        });
+      });
+
+      setPriceFlashes(flashes);
+      setLastMarketUpdate(currentTimeStr);
+
+      // Clear flashes after 900ms
+      const flashTimeout = setTimeout(() => {
+        setPriceFlashes({});
+      }, 900);
+
+      return () => clearTimeout(flashTimeout);
+    }, 2800);
+
+    return () => clearInterval(interval);
+  }, [isLiveTickerActive, stocks.length]);
+
   // Save to localStorage
   useEffect(() => {
     localStorage.setItem('stocksense_stocks', JSON.stringify(stocks));
@@ -412,7 +494,11 @@ export const StockProvider = ({ children }) => {
         notifications,
         isChatOpen,
         setIsChatOpen,
-        toggleChatbot: () => setIsChatOpen(o => !o)
+        toggleChatbot: () => setIsChatOpen(o => !o),
+        isLiveTickerActive,
+        toggleLiveTicker: () => setIsLiveTickerActive(a => !a),
+        priceFlashes,
+        lastMarketUpdate
       }}
     >
       {children}

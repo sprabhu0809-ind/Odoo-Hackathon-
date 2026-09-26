@@ -34,7 +34,10 @@ export const Navbar = () => {
     formatMoney,
     notifications,
     speakText,
-    isSpeaking
+    isSpeaking,
+    isLiveTickerActive,
+    toggleLiveTicker,
+    lastMarketUpdate
   } = useStock();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -144,9 +147,13 @@ export const Navbar = () => {
                     AI
                   </span>
                 </div>
-                <p className="text-xs font-medium text-slate-500 hidden sm:block">
-                  Smart Guidance for Everyone
-                </p>
+                <div className="flex items-center space-x-1.5 mt-0.5">
+                  <span className={`inline-block w-2 h-2 rounded-full ${isLiveTickerActive ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`}></span>
+                  <span className="text-[10px] font-extrabold tracking-wide text-emerald-700 uppercase">
+                    {isLiveTickerActive ? 'Live Market' : 'Paused'}
+                  </span>
+                  <span className="text-[10px] text-slate-400 hidden sm:inline">• {lastMarketUpdate}</span>
+                </div>
               </div>
             </button>
           </div>

@@ -23,7 +23,11 @@ export const TopStocksCarousel = () => {
     mode,
     speakText,
     isSpeaking,
-    speakingId
+    speakingId,
+    isLiveTickerActive,
+    toggleLiveTicker,
+    priceFlashes,
+    lastMarketUpdate
   } = useStock();
 
   const scrollContainerRef = useRef(null);
@@ -38,13 +42,28 @@ export const TopStocksCarousel = () => {
   return (
     <div className="space-y-4">
       {/* Section Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-extrabold font-display text-slate-900 flex items-center space-x-2">
-            <span>🔥 Trending Stocks & AI Verdicts</span>
-          </h2>
+          <div className="flex items-center space-x-2.5">
+            <h2 className="text-xl font-extrabold font-display text-slate-900 flex items-center space-x-2">
+              <span>🔥 Trending Stocks & Live Prices</span>
+            </h2>
+            {/* Live Ticker Pulse Badge */}
+            <button
+              onClick={toggleLiveTicker}
+              className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-black tracking-wide border transition-all ${
+                isLiveTickerActive
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 ring-2 ring-emerald-100'
+                  : 'bg-slate-100 text-slate-500 border-slate-200'
+              }`}
+              title="Click to pause or resume real-time price fluctuations"
+            >
+              <span className={`w-2 h-2 rounded-full mr-1.5 ${isLiveTickerActive ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`}></span>
+              <span>{isLiveTickerActive ? 'LIVE • TICKING' : 'PAUSED'}</span>
+            </button>
+          </div>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Tap any card to inspect chart, or tap Buy for instant simulated purchase.
+            Updated at {lastMarketUpdate} • Prices fluctuate in real-time. Tap any card to inspect live chart.
           </p>
         </div>
 
@@ -169,46 +188,64 @@ export const TopStocksCarousel = () => {
                   </div>
                 </div>
 
-                {/* Price, Arrow & Mini Sparkline */}
-                <div className="mt-4 flex items-center justify-between">
-                  <div>
-                    <div className="text-xl font-extrabold text-slate-900">
-                      {formatStockPrice(stock)}
-                    </div>
-                    <div className="flex items-center space-x-1 text-xs font-bold mt-0.5">
-                      {stock.isPositive ? (
-                        <span className="text-emerald-600 flex items-center">
-                          <TrendingUp className="w-3.5 h-3.5 mr-0.5" />
-                          +{stock.changePercent}%
-                        </span>
-                      ) : (
-                        <span className="text-rose-600 flex items-center">
-                          <TrendingDown className="w-3.5 h-3.5 mr-0.5" />
-                          {stock.changePercent}%
-                        </span>
-                      )}
-                      <span className="text-slate-400 font-normal">
-                        ({stock.isPositive ? '+' : ''}{stock.change})
-                      </span>
-                    </div>
-                  </div>
+                {/* Price, Arrow & Mini Sparkline with Real-Time Flashing */}
+                {(() => {
+                  const flash = priceFlashes[stock.id];
+                  const flashBadgeClass = flash === 'up'
+                    ? 'bg-emerald-100 text-emerald-800 ring-2 ring-emerald-400 px-2 py-0.5 rounded-lg'
+                    : flash === 'down'
+                    ? 'bg-rose-100 text-rose-800 ring-2 ring-rose-400 px-2 py-0.5 rounded-lg'
+                    : 'text-slate-900';
 
-                  {/* Sparkline Visual */}
-                  <div className="w-24 h-10">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={sparklineData}>
-                        <Line
-                          type="monotone"
-                          dataKey="val"
-                          stroke={stock.isPositive ? '#22c55e' : '#ef4444'}
-                          strokeWidth={2.5}
-                          dot={false}
-                          isAnimationActive={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
+                  return (
+                    <div className="mt-4 flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center space-x-1.5">
+                          <span className={`text-xl font-extrabold transition-all duration-300 ${flashBadgeClass}`}>
+                            {formatStockPrice(stock)}
+                          </span>
+                          {flash && (
+                            <span className="text-[10px] font-black animate-bounce text-emerald-600">
+                              {flash === 'up' ? '▲' : '▼'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-1 text-xs font-bold mt-0.5">
+                          {stock.isPositive ? (
+                            <span className="text-emerald-600 flex items-center">
+                              <TrendingUp className="w-3.5 h-3.5 mr-0.5" />
+                              +{stock.changePercent}%
+                            </span>
+                          ) : (
+                            <span className="text-rose-600 flex items-center">
+                              <TrendingDown className="w-3.5 h-3.5 mr-0.5" />
+                              {stock.changePercent}%
+                            </span>
+                          )}
+                          <span className="text-slate-400 font-normal">
+                            ({stock.isPositive ? '+' : ''}{stock.change})
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Sparkline Visual */}
+                      <div className="w-24 h-10">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={sparklineData}>
+                            <Line
+                              type="monotone"
+                              dataKey="val"
+                              stroke={stock.isPositive ? '#22c55e' : '#ef4444'}
+                              strokeWidth={2.5}
+                              dot={false}
+                              isAnimationActive={false}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Simple Mode plain words summary */}
                 <div className="mt-3 bg-slate-50 p-2.5 rounded-xl border border-slate-100">

@@ -41,7 +41,10 @@ export const StockChartSection = () => {
     toggleFavorite,
     speakText,
     isSpeaking,
-    speakingId
+    speakingId,
+    priceFlashes,
+    lastMarketUpdate,
+    isLiveTickerActive
   } = useStock();
 
   const [timeframe, setTimeframe] = useState('1M');
@@ -129,21 +132,43 @@ export const StockChartSection = () => {
         {/* Right: Big Price & Quick Action Buttons */}
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-between lg:justify-end">
           
-          {/* Price Box */}
-          <div className="text-left lg:text-right">
-            <div className="text-3xl font-extrabold font-display text-slate-900">
-              {formatStockPrice(selectedStock)}
-            </div>
-            <div className="flex items-center space-x-1.5 text-sm font-bold mt-0.5">
-              <span className={selectedStock.isPositive ? 'text-emerald-600 flex items-center' : 'text-rose-600 flex items-center'}>
-                {selectedStock.isPositive ? <TrendingUp className="w-4 h-4 mr-0.5" /> : <TrendingDown className="w-4 h-4 mr-0.5" />}
-                {selectedStock.isPositive ? '+' : ''}{selectedStock.changePercent}%
-              </span>
-              <span className="text-slate-400 font-normal">
-                ({selectedStock.isPositive ? '+' : ''}{selectedStock.change})
-              </span>
-            </div>
-          </div>
+          {/* Price Box with Real-Time Flashing */}
+          {(() => {
+            const flash = priceFlashes[selectedStock.id];
+            const flashBadgeClass = flash === 'up'
+              ? 'bg-emerald-100 text-emerald-800 ring-4 ring-emerald-400/40 px-2 py-0.5 rounded-xl'
+              : flash === 'down'
+              ? 'bg-rose-100 text-rose-800 ring-4 ring-rose-400/40 px-2 py-0.5 rounded-xl'
+              : 'text-slate-900';
+
+            return (
+              <div className="text-left lg:text-right">
+                <div className="flex items-center lg:justify-end space-x-2">
+                  <span className={`text-3xl font-extrabold font-display transition-all duration-300 ${flashBadgeClass}`}>
+                    {formatStockPrice(selectedStock)}
+                  </span>
+                  {flash && (
+                    <span className={`text-sm font-black animate-bounce ${flash === 'up' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {flash === 'up' ? '▲' : '▼'}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center space-x-1.5 text-sm font-bold mt-0.5 lg:justify-end">
+                  <span className={selectedStock.isPositive ? 'text-emerald-600 flex items-center' : 'text-rose-600 flex items-center'}>
+                    {selectedStock.isPositive ? <TrendingUp className="w-4 h-4 mr-0.5" /> : <TrendingDown className="w-4 h-4 mr-0.5" />}
+                    {selectedStock.isPositive ? '+' : ''}{selectedStock.changePercent}%
+                  </span>
+                  <span className="text-slate-400 font-normal">
+                    ({selectedStock.isPositive ? '+' : ''}{selectedStock.change})
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-400 font-medium mt-0.5 lg:text-right flex items-center lg:justify-end space-x-1">
+                  <span className={`w-1.5 h-1.5 rounded-full ${isLiveTickerActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
+                  <span>Tick: {lastMarketUpdate}</span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Action Buttons */}
           <div className="flex items-center space-x-2">
