@@ -1,6 +1,6 @@
 <div align="center">
 
-# 📈 StockSense AI
+# 📈 StockSense AI.
 ### *Next-Generation Accessible Financial Intelligence & Real-Time Market Analytics*
 
 [![React 19](https://img.shields.io/badge/React-19.0.0-61dafb?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
