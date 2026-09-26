@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useStock } from '../context/StockContext';
+import { AppIconBadge } from './AppIconBadge';
 import {
   TrendingUp,
   Search,
@@ -14,10 +16,13 @@ import {
   CheckCircle2,
   DollarSign,
   Type,
-  X
+  X,
+  Megaphone,
+  User
 } from 'lucide-react';
 
 export const Navbar = () => {
+  const navigate = useNavigate();
   const {
     stocks,
     selectedStockId,
@@ -129,14 +134,12 @@ export const Navbar = () => {
           
           {/* Left: Brand Logo & Tagline */}
           <div className="flex items-center space-x-3">
-            <button
-              onClick={() => setCurrentTab('user')}
+            <Link
+              to="/"
               className="flex items-center space-x-2.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-900 rounded-xl p-1"
               aria-label="StockSense Home"
             >
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-900 to-brand-700 flex items-center justify-center text-white shadow-md shadow-brand-900/20">
-                <TrendingUp className="w-6 h-6 stroke-[2.5]" />
-              </div>
+              <AppIconBadge icon={TrendingUp} variant="brand" size="md" />
               <div className="text-left">
                 <div className="flex items-center space-x-1.5">
                   <span className="font-display font-extrabold text-2xl tracking-tight text-brand-navy">
@@ -155,7 +158,7 @@ export const Navbar = () => {
                   <span className="text-[10px] text-slate-400 hidden sm:inline">• {lastMarketUpdate}</span>
                 </div>
               </div>
-            </button>
+            </Link>
           </div>
 
           {/* Center: Search Bar with Voice Search */}
@@ -335,19 +338,32 @@ export const Navbar = () => {
               )}
             </div>
 
-            {/* Admin / User View Switcher */}
-            <button
-              onClick={() => setCurrentTab(currentTab === 'user' ? 'admin' : 'user')}
-              className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all touch-target ${
-                currentTab === 'admin'
-                  ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-600 shadow-sm'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-              }`}
-              title="Toggle Admin Management Dashboard"
+            {/* Marketer & Admin Navigation */}
+            <Link
+              to="/marketer"
+              className="flex items-center space-x-1 px-2.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-indigo-600 hover:bg-slate-100 border border-slate-200 transition-colors"
+              title="Marketer Dashboard"
             >
-              <ShieldCheck className="w-4 h-4" />
-              <span className="hidden sm:inline">{currentTab === 'admin' ? 'User Mode' : 'Admin'}</span>
-            </button>
+              <Megaphone className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="hidden xl:inline">Marketer</span>
+            </Link>
+
+            <Link
+              to="/admin"
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 border border-amber-300 transition-all touch-target"
+              title="Admin Command Center"
+            >
+              <ShieldCheck className="w-4 h-4 text-amber-600" />
+              <span className="hidden sm:inline">Admin</span>
+            </Link>
+
+            <Link
+              to="/login"
+              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
+              title="Switch Role / Logout"
+            >
+              <User className="w-4 h-4" />
+            </Link>
 
             {/* User Avatar & Simulated Wallet */}
             <div className="hidden lg:flex items-center space-x-2.5 pl-2 border-l border-slate-200">

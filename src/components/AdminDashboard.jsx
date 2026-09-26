@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useStock } from '../context/StockContext';
 import {
   ShieldCheck,
@@ -146,14 +147,14 @@ export const AdminDashboard = () => {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             
             <div className="flex items-center space-x-3">
-              <button
-                onClick={() => setCurrentTab('user')}
+              <Link
+                to="/app"
                 className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition-colors flex items-center space-x-1.5 touch-target"
                 title="Return to User View"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span className="text-xs font-bold">Back to User App</span>
-              </button>
+              </Link>
               
               <div className="h-6 w-px bg-slate-700 hidden sm:block"></div>
 
