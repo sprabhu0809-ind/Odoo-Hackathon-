@@ -94,10 +94,8 @@ export const getTrainStationAnnouncement = (stock, lang = 'en', currency = 'USD'
   return `Attention please: ${stock.name} is now trading at ${priceVal} ${currWord}, ${dir} ${changePct} percent.`;
 };
 
-// Chat multilingual responses with live price injection
-export const getChatAnswerPhrase = (qa, stock, lang = 'en', currency = 'USD') => {
-  if (!stock) return qa.answer;
-
+// Concise live price and rate voice prompt
+export const getLivePriceVoicePrompt = (stock, lang = 'en', currency = 'USD') => {
   const currWord = currency === 'INR'
     ? (lang === 'hi' ? 'रुपये' : lang === 'ta' ? 'ரூபாய்' : 'rupees')
     : (lang === 'hi' ? 'डॉलर' : lang === 'ta' ? 'டாலர்' : 'dollars');
@@ -108,14 +106,15 @@ export const getChatAnswerPhrase = (qa, stock, lang = 'en', currency = 'USD') =>
 
   if (lang === 'hi') {
     const dir = isUp ? 'ऊपर' : 'नीचे';
-    return `${stock.name} अभी ${priceVal} ${currWord} पर चल रहा है, पिछले कुछ मिनटों में ${changePct} प्रतिशत ${dir} है। ${qa.answer}`;
+    return `${stock.name} का लाइव भाव ${priceVal} ${currWord} है, अभी ${changePct} प्रतिशत ${dir} चल रहा है।`;
   }
 
   if (lang === 'ta') {
-    const dir = isUp ? 'ஏற்றம்' : 'சரிவு';
-    return `${stock.name} தற்போது ${priceVal} ${currWord} விலையில் உள்ளது, கடந்த சில நிமிடங்களில் ${changePct} சதவீதம் ${dir} கண்டுள்ளது. ${qa.answer}`;
+    const dir = isUp ? 'ஏற்றம்' : 'இறக்கம்';
+    return `${stock.name} நேரடி விலை ${priceVal} ${currWord}, தற்போது ${changePct} சதவீதம் ${dir} உள்ளது.`;
   }
 
   const dir = isUp ? 'up' : 'down';
-  return `${stock.name} is trading at ${priceVal} ${currWord} right now, ${dir} ${changePct} percent in the last few minutes. ${qa.answer}`;
+  return `${stock.name} is currently ${priceVal} ${currWord}, ${dir} ${changePct} percent right now.`;
 };
+

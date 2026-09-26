@@ -10,6 +10,7 @@ import {
   playTrainStationChime,
   getStockAdvicePhrase,
   getTrainStationAnnouncement,
+  getLivePriceVoicePrompt,
   SUPPORTED_LANGUAGES
 } from '../lib/audioAnnouncer';
 
@@ -287,6 +288,18 @@ export const StockProvider = ({ children }) => {
     const activeLang = customLang || language;
     const textToSpeak = getStockAdvicePhrase(stock, activeLang, currency);
     speakText(textToSpeak, `stock-${stock.id}`, activeLang);
+  };
+
+  // Speaks the concise live current price and percentage change in English, Hindi, or Tamil
+  const speakLivePriceVoicePrompt = (stockOrId, lang = 'en') => {
+    const stock = typeof stockOrId === 'string'
+      ? stocks.find(s => s.id === stockOrId)
+      : stockOrId;
+
+    if (!stock) return;
+
+    const textToSpeak = getLivePriceVoicePrompt(stock, lang, currency);
+    speakText(textToSpeak, `live-price-${stock.id}-${lang}`, lang);
   };
 
   const speakText = (text, id, customLang = null) => {
@@ -612,6 +625,7 @@ export const StockProvider = ({ children }) => {
         isSpeaking,
         speakText,
         speakStockAdvice,
+        speakLivePriceVoicePrompt,
         stopSpeaking,
         buyModal,
         openBuyModal,

@@ -12,6 +12,7 @@ export const AiRecommendationBanner = () => {
     toggleFavorite,
     speakText,
     speakStockAdvice,
+    speakLivePriceVoicePrompt,
     isSpeaking,
     speakingId,
     formatStockPrice
@@ -79,20 +80,33 @@ export const AiRecommendationBanner = () => {
         {/* Right: Quick Action Buttons (Listen, Buy, Details) */}
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           
-          {/* Audio Advice Button */}
-          <button
-            onClick={handleListen}
-            className={`touch-target px-4 py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center space-x-2 transition-all ${
-              isCurrentSpeaking
-                ? 'bg-amber-400 text-brand-navy ring-4 ring-amber-300/40 shadow-lg'
-                : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-            }`}
-            title="Listen to AI audio advice"
-            aria-label="Listen to AI advice"
-          >
-            <Volume2 className={`w-4 h-4 ${isCurrentSpeaking ? 'animate-bounce' : ''}`} />
-            <span>{isCurrentSpeaking ? 'Speaking...' : '🔊 Listen to AI Advice'}</span>
-          </button>
+          {/* 3-Language Live Voice Prompts (English, Hindi, Tamil) */}
+          <div className="flex items-center space-x-1 bg-white/10 p-1 rounded-2xl border border-white/20 shadow-inner">
+            <button
+              onClick={() => speakLivePriceVoicePrompt(featured, 'en')}
+              className="touch-target px-3 py-2 rounded-xl text-xs font-bold bg-white/20 hover:bg-white/30 text-white transition-all flex items-center space-x-1"
+              title="Hear live price & rate in English voice"
+            >
+              <span>🔊</span>
+              <span>English</span>
+            </button>
+            <button
+              onClick={() => speakLivePriceVoicePrompt(featured, 'hi')}
+              className="touch-target px-3 py-2 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-brand-navy transition-all flex items-center space-x-1"
+              title="हिन्दी आवाज़ में लाइव भाव और दर सुनें"
+            >
+              <span>🔊</span>
+              <span>हिन्दी</span>
+            </button>
+            <button
+              onClick={() => speakLivePriceVoicePrompt(featured, 'ta')}
+              className="touch-target px-3 py-2 rounded-xl text-xs font-bold bg-emerald-400 hover:bg-emerald-300 text-brand-navy transition-all flex items-center space-x-1"
+              title="தமிழ் குரலில் நேரடி விலை மற்றும் சதவீதத்தை கேட்க"
+            >
+              <span>🔊</span>
+              <span>தமிழ்</span>
+            </button>
+          </div>
 
           {/* Favorite Toggle */}
           <button

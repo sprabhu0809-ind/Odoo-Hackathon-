@@ -41,6 +41,7 @@ export const StockChartSection = () => {
     toggleFavorite,
     speakText,
     speakStockAdvice,
+    speakLivePriceVoicePrompt,
     isSpeaking,
     speakingId,
     priceFlashes,
@@ -163,6 +164,37 @@ export const StockChartSection = () => {
                 <div className="text-[10px] text-slate-400 font-medium mt-0.5 lg:text-right flex items-center lg:justify-end space-x-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${isLiveTickerActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
                   <span>Tick: {lastMarketUpdate}</span>
+                </div>
+
+                {/* 3-LANGUAGE LIVE VOICE PROMPTS FOR LIVE PRICE & RATE */}
+                <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center lg:justify-end gap-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center mr-0.5">
+                    <Volume2 className="w-3 h-3 mr-1 text-brand-900" /> Live Voice:
+                  </span>
+                  <button
+                    onClick={() => speakLivePriceVoicePrompt(selectedStock, 'en')}
+                    className="touch-target px-2.5 py-1 rounded-xl text-xs font-bold bg-blue-50 hover:bg-blue-100 text-brand-900 border border-blue-200 transition-all flex items-center space-x-1"
+                    title="Speak current live price and rate in English"
+                  >
+                    <span>🔊</span>
+                    <span>English</span>
+                  </button>
+                  <button
+                    onClick={() => speakLivePriceVoicePrompt(selectedStock, 'hi')}
+                    className="touch-target px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-all flex items-center space-x-1"
+                    title="लाइव भाव और दर हिन्दी आवाज़ में सुनें"
+                  >
+                    <span>🔊</span>
+                    <span>हिन्दी</span>
+                  </button>
+                  <button
+                    onClick={() => speakLivePriceVoicePrompt(selectedStock, 'ta')}
+                    className="touch-target px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 transition-all flex items-center space-x-1"
+                    title="நேரடி விலை மற்றும் மாற்றத்தை தமிழ் குரலில் கேட்க"
+                  >
+                    <span>🔊</span>
+                    <span>தமிழ்</span>
+                  </button>
                 </div>
               </div>
             );

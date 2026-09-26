@@ -23,6 +23,7 @@ export const TopStocksCarousel = () => {
     mode,
     speakText,
     speakStockAdvice,
+    speakLivePriceVoicePrompt,
     isSpeaking,
     speakingId,
     isLiveTickerActive,
@@ -256,20 +257,62 @@ export const TopStocksCarousel = () => {
                 </div>
               </div>
 
-              {/* Bottom Quick Action: 48px+ Buy Button */}
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center space-x-2">
+              {/* Bottom Quick Action: 48px+ Buy Button & 3-Language Live Voice Prompts */}
+              <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col space-y-2">
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     openBuyModal(stock);
                   }}
-                  className="flex-1 touch-target py-2.5 px-4 bg-brand-900 hover:bg-brand-800 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md shadow-brand-900/10 flex items-center justify-center space-x-1.5 transition-all"
+                  className="w-full touch-target py-2.5 px-4 bg-brand-900 hover:bg-brand-800 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md shadow-brand-900/10 flex items-center justify-center space-x-1.5 transition-all"
                   aria-label={`Buy ${stock.symbol}`}
                 >
                   <ShoppingCart className="w-4 h-4" />
                   <span>Buy {stock.symbol}</span>
                 </button>
+
+                {/* 3-Language Live Price & Rate Voice Prompt */}
+                <div className="flex items-center justify-between text-xs bg-slate-50 p-1.5 rounded-xl border border-slate-200/80">
+                  <span className="text-slate-500 flex items-center text-[10px] font-black uppercase tracking-wider ml-1">
+                    <Volume2 className="w-3 h-3 mr-1 text-brand-900" /> Voice:
+                  </span>
+                  <div className="flex items-center space-x-1">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        speakLivePriceVoicePrompt(stock, 'en');
+                      }}
+                      className="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-blue-100 hover:bg-blue-200 text-brand-900 transition-colors"
+                      title={`Speak ${stock.symbol} live price in English`}
+                    >
+                      English
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        speakLivePriceVoicePrompt(stock, 'hi');
+                      }}
+                      className="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-amber-100 hover:bg-amber-200 text-amber-900 transition-colors"
+                      title={`${stock.symbol} लाइव भाव हिन्दी में सुनें`}
+                    >
+                      हिन्दी
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        speakLivePriceVoicePrompt(stock, 'ta');
+                      }}
+                      className="px-2 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-100 hover:bg-emerald-200 text-emerald-900 transition-colors"
+                      title={`${stock.symbol} நேரடி விலை தமிழில் கேட்க`}
+                    >
+                      தமிழ்
+                    </button>
+                  </div>
+                </div>
               </div>
 
             </div>
