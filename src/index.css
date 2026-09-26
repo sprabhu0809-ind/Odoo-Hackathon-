@@ -72,3 +72,25 @@
   border: 1px solid #E2E8F0 !important;
   font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
+
+/* Continuous infinite horizontal marquee ticker */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+

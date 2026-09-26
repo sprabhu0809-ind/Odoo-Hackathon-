@@ -16,12 +16,15 @@ import {
   Sparkles,
   Lock,
   Mail,
-  CheckCircle2
+  CheckCircle2,
+  Activity,
+  ArrowLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { setCurrentTab } = useStock();
+  const { stocks, formatStockPrice, priceFlashes, setCurrentTab } = useStock();
 
   const [selectedRole, setSelectedRole] = useState('user'); // 'user' | 'marketer' | 'admin'
   const [email, setEmail] = useState('aarav.patel@stocksense.io');
@@ -41,27 +44,147 @@ export const LoginPage = () => {
     }
   };
 
+  // Duplicate stock array for infinite seamless looping
+  const tickerStocks = [...stocks, ...stocks];
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-center py-12 sm:px-6 lg:px-8 selection:bg-brand-900 selection:text-white">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-between selection:bg-brand-900 selection:text-white">
       
-      {/* Top Brand Header */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <Link to="/" className="inline-flex items-center space-x-2.5 mb-3">
-          <AppIconBadge icon={TrendingUp} variant="brand" size="lg" />
-          <span className="font-display font-extrabold text-3xl text-brand-navy tracking-tight">
-            Stock<span className="text-brand-900">Sense</span>
-          </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
-            <Sparkles className="w-3 h-3 mr-0.5 fill-amber-500 text-amber-600" /> AI
-          </span>
-        </Link>
-        <h2 className="text-xl font-extrabold font-display text-slate-900 tracking-tight">
-          Sign In & Choose Your Role
-        </h2>
-        <p className="text-xs text-slate-500 font-medium mt-1">
-          Select an account persona to explore the corresponding dashboard
-        </p>
-      </div>
+      {/* ========================================================================= */}
+      {/* 1. TOP HEADER NAVIGATION WITH LIVE PULSE */}
+      {/* ========================================================================= */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+          
+          {/* Logo & Brand */}
+          <Link to="/" className="flex items-center space-x-2.5 group">
+            <AppIconBadge icon={TrendingUp} variant="brand" size="md" />
+            <div className="flex items-center space-x-2">
+              <span className="font-display font-extrabold text-2xl text-brand-navy tracking-tight group-hover:text-brand-900 transition-colors">
+                Stock<span className="text-brand-900">Sense</span>
+              </span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                <Sparkles className="w-3 h-3 mr-0.5 fill-amber-500 text-amber-600" /> AI
+              </span>
+            </div>
+          </Link>
+
+          {/* Quick Nav Links */}
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            <div className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+              <span>Live Market Engine Active</span>
+            </div>
+
+            <Link
+              to="/"
+              className="touch-target inline-flex items-center space-x-1.5 text-xs sm:text-sm font-bold text-slate-600 hover:text-brand-900 px-3 py-2 rounded-xl transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Back to Home</span>
+            </Link>
+
+            <Link
+              to="/app"
+              className="touch-target px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs transition-colors hidden sm:flex items-center space-x-1"
+            >
+              <span>Explore Demo</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 2. ANIMATED HORIZONTAL SCROLL TICKER TAPE (REAL-TIME PRICES) */}
+        {/* ========================================================================= */}
+        <div className="bg-[#0F172A] text-white py-2 overflow-hidden border-t border-b border-slate-800 relative shadow-inner">
+          
+          {/* Left badge anchor */}
+          <div className="absolute left-0 top-0 bottom-0 z-10 px-3 bg-gradient-to-r from-[#0F172A] via-[#0F172A] to-transparent flex items-center pointer-events-none">
+            <span className="flex items-center space-x-1.5 text-[10px] font-black uppercase tracking-wider text-amber-400 bg-slate-900/90 px-2 py-0.5 rounded border border-amber-500/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>LIVE</span>
+            </span>
+          </div>
+
+          {/* Right gradient fade */}
+          <div className="absolute right-0 top-0 bottom-0 z-10 w-16 bg-gradient-to-l from-[#0F172A] to-transparent pointer-events-none"></div>
+
+          {/* Scrolling ticker track */}
+          <div className="flex animate-marquee whitespace-nowrap pl-20">
+            {tickerStocks.map((stk, index) => {
+              const isFlashing = priceFlashes[stk.id];
+              const flashBg = isFlashing === 'up'
+                ? 'bg-emerald-500/20 text-emerald-300'
+                : isFlashing === 'down'
+                ? 'bg-rose-500/20 text-rose-300'
+                : '';
+
+              return (
+                <div
+                  key={`${stk.id}-${index}`}
+                  className={`inline-flex items-center space-x-2.5 px-4 py-0.5 rounded-lg transition-colors duration-300 ${flashBg}`}
+                >
+                  <span className="text-sm">{stk.emoji}</span>
+                  <span className="font-extrabold text-xs text-white tracking-wide">
+                    {stk.symbol}
+                  </span>
+                  
+                  {/* Real-time price */}
+                  <span className="font-bold text-xs text-slate-200 font-mono">
+                    {formatStockPrice(stk)}
+                  </span>
+
+                  {/* Up / Down change percentage */}
+                  <span
+                    className={`inline-flex items-center text-[11px] font-black font-mono ${
+                      stk.isPositive ? 'text-emerald-400' : 'text-rose-400'
+                    }`}
+                  >
+                    {stk.isPositive ? '▲ +' : '▼ '}
+                    {Math.abs(stk.changePercent).toFixed(2)}%
+                  </span>
+
+                  {/* Traffic Light Mini Badge */}
+                  <span
+                    className={`text-[9px] px-1.5 py-0.2 rounded font-extrabold ${
+                      stk.trafficLight === 'green'
+                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                        : stk.trafficLight === 'yellow'
+                        ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                        : 'bg-rose-950 text-rose-300 border border-rose-800'
+                    }`}
+                  >
+                    {stk.trafficLightLabel}
+                  </span>
+
+                  <span className="text-slate-600 ml-1 select-none">•</span>
+                </div>
+              );
+            })}
+          </div>
+
+        </div>
+      </header>
+
+      {/* ========================================================================= */}
+      {/* 3. MAIN SIGN-IN & ROLE SELECTOR CARD */}
+      {/* ========================================================================= */}
+      <div className="flex-1 flex flex-col justify-center py-10 sm:py-14 sm:px-6 lg:px-8">
+        
+        <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+          <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-blue-50 text-brand-900 border border-blue-200 text-xs font-bold mb-3">
+            <Sparkles className="w-3.5 h-3.5 fill-brand-900 text-brand-900" />
+            <span>Select Role & Sign In</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold font-display text-slate-900 tracking-tight">
+            Welcome to StockSense
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+            Choose your account persona to enter the tailored portal
+          </p>
+        </div>
 
       {/* Main Login Card */}
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-lg px-4 sm:px-0">
@@ -233,7 +356,22 @@ export const LoginPage = () => {
 
         </div>
       </div>
-
     </div>
+
+    {/* Simple Accessible Footer */}
+    <footer className="py-4 border-t border-slate-200 bg-white text-center text-xs text-slate-500 font-medium">
+      <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="flex items-center space-x-2">
+          <span className="font-extrabold text-brand-navy">StockSense AI</span>
+          <span>•</span>
+          <span>Ultra-Accessible Stock Advisory</span>
+        </div>
+        <div className="text-slate-400 text-[11px]">
+          Demo Environment • Real-time simulated price ticks with directional momentum
+        </div>
+      </div>
+    </footer>
+
+  </div>
   );
 };
