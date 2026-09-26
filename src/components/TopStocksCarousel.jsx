@@ -22,6 +22,7 @@ export const TopStocksCarousel = () => {
     formatStockPrice,
     mode,
     speakText,
+    speakStockAdvice,
     isSpeaking,
     speakingId,
     isLiveTickerActive,
@@ -148,13 +149,13 @@ export const TopStocksCarousel = () => {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        speakText(`${stock.name}. Verdict: ${stock.trafficLightLabel}. ${stock.simpleVerdict}`, `card-${stock.id}`);
+                        speakStockAdvice(stock);
                       }}
                       className={`p-2 rounded-xl text-xs transition-colors touch-target flex items-center justify-center ${
-                        isSpeakingStock ? 'bg-amber-400 text-brand-navy ring-2 ring-amber-300' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                        speakingId === `stock-${stock.id}` && isSpeaking ? 'bg-amber-400 text-brand-navy ring-2 ring-amber-300' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
                       }`}
-                      title="Listen to advice"
-                      aria-label={`Listen to advice for ${stock.symbol}`}
+                      title="Listen to live price & advice"
+                      aria-label={`Listen to live price and advice for ${stock.symbol}`}
                     >
                       <Volume2 className="w-4 h-4" />
                     </button>

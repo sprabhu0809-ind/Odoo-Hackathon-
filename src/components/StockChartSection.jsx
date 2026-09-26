@@ -40,6 +40,7 @@ export const StockChartSection = () => {
     favorites,
     toggleFavorite,
     speakText,
+    speakStockAdvice,
     isSpeaking,
     speakingId,
     priceFlashes,
@@ -66,12 +67,9 @@ export const StockChartSection = () => {
     badgeColor = 'bg-rose-100 text-rose-800 border-rose-300';
   }
 
-  // Handle Voice Audio advice trigger
+  // Handle Voice Audio advice trigger (reads live current price & rate out loud)
   const handleListen = () => {
-    const textToSpeak = mode === 'simple'
-      ? `${selectedStock.name}. Current price is ${formatStockPrice(selectedStock)}. The AI verdict is: ${selectedStock.simpleVerdict}`
-      : `${selectedStock.name} ticker ${selectedStock.symbol}. Trading at ${formatStockPrice(selectedStock)}. Pro Analysis: ${selectedStock.proVerdict}`;
-    speakText(textToSpeak, `chart-${selectedStock.id}`);
+    speakStockAdvice(selectedStock);
   };
 
   // Custom Tooltip

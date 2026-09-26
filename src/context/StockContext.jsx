@@ -1,5 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { INITIAL_STOCKS, MARKET_HEALTH_DATA, MOCK_ADMIN_USERS, MOCK_NEWS } from '../data/mockData';
+// TODO: This interval-based tick loop simulates real-time prices for the demo.
+// Once a real data source is connected (Supabase Realtime channel, or a live
+// market-data API), replace the setInterval nudge logic with a subscription
+// that pushes real price updates into this same PriceContext shape.
+
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { INITIAL_STOCKS, MARKET_HEALTH_DATA, MOCK_ADMIN_USERS, MOCK_NEWS, MOCK_BROADCASTS } from '../data/mockData';
 import confetti from 'canvas-confetti';
 
 // TODO: Replace with Clerk useUser() hook once auth is connected
@@ -8,11 +13,27 @@ import confetti from 'canvas-confetti';
 const StockContext = createContext(null);
 
 export const StockProvider = ({ children }) => {
-  // TODO: Replace mockStocks with Supabase `stocks` table fetch
-  // Example: const { data: stocks, error } = await supabase.from('stocks').select('*');
+  // USD to INR conversion rate
+  const USD_TO_INR = 84.50;
+
+  // Initialize stocks with dayOpenPrice and momentum state
   const [stocks, setStocks] = useState(() => {
-    const saved = localStorage.getItem('stocksense_stocks');
-    return saved ? JSON.parse(saved) : INITIAL_STOCKS;
+    const saved = localStorage.getItem('stocksense_stocks_v2');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved stocks", e);
+      }
+    }
+    return INITIAL_STOCKS.map(s => ({
+      ...s,
+      dayOpenPrice: +(s.priceUSD / (1 + (s.changePercent || 0) / 100)).toFixed(2),
+      momentum: {
+        trend: s.isPositive ? 'up' : 'down',
+        remainingTicks: Math.floor(Math.random() * 12) + 8
+      }
+    }));
   });
 
   const [selectedStockId, setSelectedStockId] = useState('aapl');
@@ -21,9 +42,6 @@ export const StockProvider = ({ children }) => {
   const [fontSizeMode, setFontSizeMode] = useState('normal'); // 'normal' | 'large' | 'xl'
   const [currentTab, setCurrentTab] = useState('user'); // 'user' | 'admin'
   const [adminSubTab, setAdminSubTab] = useState('analytics'); // 'analytics' | 'stocks' | 'users' | 'broadcast' | 'integrations'
-  
-  // Market Health state
-  const [marketHealth, setMarketHealth] = useState(MARKET_HEALTH_DATA);
 
   // Admin users state
   // TODO: Replace mockUsers with Supabase `users` table fetch
@@ -31,12 +49,8 @@ export const StockProvider = ({ children }) => {
 
   // System Broadcast State
   // TODO: Replace broadcast with Supabase `broadcasts` realtime subscription
-  const [systemBroadcast, setSystemBroadcast] = useState({
-    id: 'broadcast-1',
-    text: '📢 Notice: Markets are in a high-liquidity consolidation phase. AI Advisory buy ratings remain intact.',
-    active: true,
-    type: 'info'
-  });
+  const [systemBroadcast, setSystemBroadcast] = useState(MOCK_BROADCASTS[0]);
+  const [allBroadcasts, setAllBroadcasts] = useState(MOCK_BROADCASTS);
 
   // User simulated portfolio state
   // TODO: Replace userPortfolio with Supabase `portfolios` and `transactions` tables linked to Clerk userId
@@ -59,7 +73,7 @@ export const StockProvider = ({ children }) => {
   // TODO: Replace with Supabase `favorites` table
   const [favorites, setFavorites] = useState(() => {
     const saved = localStorage.getItem('stocksense_favorites');
-    return saved ? JSON.parse(saved) : ['aapl', 'nvda', 'reliance'];
+    return saved ? JSON.parse(saved) : ['aapl', 'nvda', 'reliance', 'msft'];
   });
 
   // Audio Speech state
@@ -72,101 +86,27 @@ export const StockProvider = ({ children }) => {
   // Floating Chatbot State
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  // Notifications
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'AI Buy Signal Triggered', body: 'Apple (AAPL) reached 88% AI Buy Score with strong institutional inflow.', time: '10m ago', unread: true },
-    { id: 2, title: 'Earnings Alert', body: 'NVIDIA quarterly cloud revenue projection revised upward +12%.', time: '1h ago', unread: true },
-    { id: 3, title: 'Market Sentiment', body: 'StockSense Market Health Meter registers a comfortable 82/100.', time: '3h ago', unread: false }
-  ]);
-
-  // Selected stock object
-  const selectedStock = stocks.find(s => s.id === selectedStockId) || stocks[0];
-
-  // Real-time market ticker state
+  // Real-time market ticker & visual flash state
   const [isLiveTickerActive, setIsLiveTickerActive] = useState(true);
   const [priceFlashes, setPriceFlashes] = useState({});
   const [lastMarketUpdate, setLastMarketUpdate] = useState(() => new Date().toLocaleTimeString());
 
-  // Real-Time Price Fluctuations Effect (Simulates live market trading activity)
-  useEffect(() => {
-    if (!isLiveTickerActive) return;
+  // Dynamic Market Health state (calculated live from stock breadth)
+  const [marketHealth, setMarketHealth] = useState(MARKET_HEALTH_DATA);
 
-    const interval = setInterval(() => {
-      // Pick 1 to 3 random stocks to fluctuate
-      const count = Math.floor(Math.random() * 2) + 1;
-      const targetIndices = new Set();
-      while (targetIndices.size < count) {
-        targetIndices.add(Math.floor(Math.random() * stocks.length));
-      }
+  // Notifications
+  const [notifications, setNotifications] = useState([
+    { id: 1, title: 'AI Buy Signal Triggered', body: 'Apple (AAPL) reached 88% AI Buy Score with strong institutional inflow.', time: '10m ago', unread: true },
+    { id: 2, title: 'Earnings Alert', body: 'NVIDIA quarterly cloud revenue projection revised upward +12%.', time: '1h ago', unread: true },
+    { id: 3, title: 'Market Sentiment', body: 'StockSense Market Health Meter registers a comfortable safe rating.', time: '3h ago', unread: false }
+  ]);
 
-      const flashes = {};
-      const currentTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-      setStocks(prevStocks => {
-        return prevStocks.map((stock, idx) => {
-          if (!targetIndices.has(idx)) return stock;
-
-          // Fluctuate price slightly (-0.35% to +0.35%)
-          const deltaFactor = (Math.random() - 0.48) * 0.007;
-          const oldPrice = stock.priceUSD;
-          const deltaUSD = +(oldPrice * deltaFactor).toFixed(2);
-          const newPriceUSD = Math.max(1, +(oldPrice + deltaUSD).toFixed(2));
-          const isUp = newPriceUSD >= oldPrice;
-
-          flashes[stock.id] = isUp ? 'up' : 'down';
-
-          const newPriceINR = +(newPriceUSD * USD_TO_INR).toFixed(2);
-          const newChange = +(stock.change + deltaUSD).toFixed(2);
-          const newChangePercent = +(stock.changePercent + (deltaFactor * 100)).toFixed(2);
-
-          // Update latest history datapoints in real-time
-          const updatedHistory = { ...stock.history };
-          if (updatedHistory['1D'] && updatedHistory['1D'].length > 0) {
-            const series1D = [...updatedHistory['1D']];
-            const lastPoint = { ...series1D[series1D.length - 1] };
-            lastPoint.price = newPriceUSD;
-            lastPoint.close = newPriceUSD;
-            if (newPriceUSD > lastPoint.high) lastPoint.high = newPriceUSD;
-            if (newPriceUSD < lastPoint.low) lastPoint.low = newPriceUSD;
-            series1D[series1D.length - 1] = lastPoint;
-            updatedHistory['1D'] = series1D;
-          }
-
-          // Update sparkline latest value
-          const updatedSparkline = [...stock.sparkline];
-          updatedSparkline[updatedSparkline.length - 1] = newPriceUSD;
-
-          return {
-            ...stock,
-            priceUSD: newPriceUSD,
-            priceINR: newPriceINR,
-            change: newChange,
-            changePercent: newChangePercent,
-            isPositive: newChange >= 0,
-            sparkline: updatedSparkline,
-            history: updatedHistory,
-            lastTickTime: currentTimeStr
-          };
-        });
-      });
-
-      setPriceFlashes(flashes);
-      setLastMarketUpdate(currentTimeStr);
-
-      // Clear flashes after 900ms
-      const flashTimeout = setTimeout(() => {
-        setPriceFlashes({});
-      }, 900);
-
-      return () => clearTimeout(flashTimeout);
-    }, 2800);
-
-    return () => clearInterval(interval);
-  }, [isLiveTickerActive, stocks.length]);
+  // Selected stock object (always points to the latest live state)
+  const selectedStock = stocks.find(s => s.id === selectedStockId) || stocks[0];
 
   // Save to localStorage
   useEffect(() => {
-    localStorage.setItem('stocksense_stocks', JSON.stringify(stocks));
+    localStorage.setItem('stocksense_stocks_v2', JSON.stringify(stocks));
   }, [stocks]);
 
   useEffect(() => {
@@ -176,9 +116,6 @@ export const StockProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('stocksense_favorites', JSON.stringify(favorites));
   }, [favorites]);
-
-  // USD to INR conversion rate
-  const USD_TO_INR = 84.50;
 
   // Format currency helper
   const formatMoney = (amountUSD, customCurrency = null) => {
@@ -192,13 +129,152 @@ export const StockProvider = ({ children }) => {
 
   // Convert raw value to display format
   const formatStockPrice = (stock) => {
+    if (!stock) return '$0.00';
     if (currency === 'INR') {
       return '₹' + stock.priceINR.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     return '$' + stock.priceUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  // Speech synthesis integration for Voice & Audio Mode
+  // =========================================================================
+  // REAL-TIME PRICE ENGINE (TICK LOOP WITH MOMENTUM & LIVE ROLLING HISTORY)
+  // =========================================================================
+  useEffect(() => {
+    if (!isLiveTickerActive) return;
+
+    const interval = setInterval(() => {
+      const flashes = {};
+      const currentTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      setStocks(prevStocks => {
+        let greenCount = 0;
+
+        const updatedStocks = prevStocks.map(stock => {
+          // Momentum state update: direction bias for realistic runs
+          let momentum = stock.momentum || {
+            trend: stock.isPositive ? 'up' : 'down',
+            remainingTicks: Math.floor(Math.random() * 10) + 5
+          };
+
+          let remainingTicks = momentum.remainingTicks - 1;
+          let trend = momentum.trend;
+
+          if (remainingTicks <= 0) {
+            // Flip trend or pick new momentum direction
+            trend = Math.random() > 0.45 ? 'up' : 'down';
+            remainingTicks = Math.floor(Math.random() * 14) + 6; // 6 to 20 ticks
+          }
+
+          // Random percentage nudge (±0.05% to ±0.35%) with momentum bias
+          const baseDelta = (Math.random() * 0.0028) + 0.0004;
+          const deltaFactor = trend === 'up' ? +baseDelta : -baseDelta;
+
+          const oldPrice = stock.priceUSD;
+          const deltaUSD = +(oldPrice * deltaFactor).toFixed(2);
+          const newPriceUSD = Math.max(1, +(oldPrice + deltaUSD).toFixed(2));
+          const isUp = newPriceUSD >= oldPrice;
+
+          flashes[stock.id] = isUp ? 'up' : 'down';
+
+          const dayOpen = stock.dayOpenPrice || oldPrice;
+          const newChange = +(newPriceUSD - dayOpen).toFixed(2);
+          const newChangePercent = +(((newPriceUSD - dayOpen) / dayOpen) * 100).toFixed(2);
+          const isPositive = newChange >= 0;
+
+          if (isPositive) greenCount++;
+
+          const newPriceINR = +(newPriceUSD * USD_TO_INR).toFixed(2);
+
+          // Update rolling history array for 1D chart (drop oldest if > 30 so chart streams smoothly!)
+          const updatedHistory = { ...stock.history };
+          if (updatedHistory['1D'] && updatedHistory['1D'].length > 0) {
+            const series1D = [...updatedHistory['1D']];
+            const lastIdx = series1D.length - 1;
+            const updatedLast = {
+              ...series1D[lastIdx],
+              price: newPriceUSD,
+              close: newPriceUSD,
+              high: Math.max(series1D[lastIdx].high || newPriceUSD, newPriceUSD),
+              low: Math.min(series1D[lastIdx].low || newPriceUSD, newPriceUSD),
+              volume: (series1D[lastIdx].volume || 2000000) + Math.floor(Math.random() * 50000)
+            };
+            series1D[lastIdx] = updatedLast;
+            updatedHistory['1D'] = series1D;
+          }
+
+          // Update sparkline latest point
+          const updatedSparkline = [...stock.sparkline];
+          updatedSparkline[updatedSparkline.length - 1] = newPriceUSD;
+
+          return {
+            ...stock,
+            priceUSD: newPriceUSD,
+            priceINR: newPriceINR,
+            change: newChange,
+            changePercent: newChangePercent,
+            isPositive,
+            sparkline: updatedSparkline,
+            history: updatedHistory,
+            lastTickTime: currentTimeStr,
+            momentum: { trend, remainingTicks }
+          };
+        });
+
+        // Live Market Health Meter Recalculation based on current breadth
+        const greenRatio = updatedStocks.length > 0 ? greenCount / updatedStocks.length : 0.7;
+        const dynamicScore = Math.round(35 + (greenRatio * 60)); // Ranges ~45 to 95
+        const dynamicState = dynamicScore >= 70 ? 'safe' : dynamicScore >= 50 ? 'caution' : 'risk';
+        const dynamicStatus = dynamicState === 'safe'
+          ? 'Market is Safe Today'
+          : dynamicState === 'caution'
+          ? 'Market is Cautious / Neutral'
+          : 'Market is Risky / Volatile';
+
+        setMarketHealth(prev => ({
+          ...prev,
+          score: dynamicScore,
+          state: dynamicState,
+          status: dynamicStatus
+        }));
+
+        return updatedStocks;
+      });
+
+      setPriceFlashes(flashes);
+      setLastMarketUpdate(currentTimeStr);
+
+      // Fade out flash after 850ms
+      const flashTimeout = setTimeout(() => {
+        setPriceFlashes({});
+      }, 850);
+
+      return () => clearTimeout(flashTimeout);
+    }, 2800);
+
+    return () => clearInterval(interval);
+  }, [isLiveTickerActive, USD_TO_INR]);
+
+  // =========================================================================
+  // REAL VOICE & AUDIO MODE (ACTUALLY SPEAKS LIVE CURRENT PRICE & RATE)
+  // =========================================================================
+  const speakStockAdvice = (stockOrId) => {
+    const stock = typeof stockOrId === 'string'
+      ? stocks.find(s => s.id === stockOrId)
+      : stockOrId;
+
+    if (!stock) return;
+
+    const currencySymbol = currency === 'INR' ? 'rupees' : 'dollars';
+    const priceValue = currency === 'INR' ? stock.priceINR.toFixed(2) : stock.priceUSD.toFixed(2);
+    const directionWord = stock.isPositive ? 'up' : 'down';
+    const absChangePercent = Math.abs(stock.changePercent);
+
+    // Dynamic phrase speaking LIVE numbers at the exact second the button is pressed
+    const textToSpeak = `${stock.name} is currently ${priceValue} ${currencySymbol}, ${directionWord} ${absChangePercent} percent today. Our AI gives it a ${stock.aiScore} percent score with ${stock.trafficLightLabel} status. ${stock.simpleVerdict}`;
+
+    speakText(textToSpeak, `stock-${stock.id}`);
+  };
+
   const speakText = (text, id) => {
     if (!('speechSynthesis' in window)) {
       console.warn('Speech synthesis not supported in this browser.');
@@ -213,10 +289,10 @@ export const StockProvider = ({ children }) => {
       return;
     }
 
-    window.speechSynthesis.cancel(); // Stop any currently playing audio
+    window.speechSynthesis.cancel(); // Stop any previous speech
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95; // Friendly, clear pacing
+    utterance.rate = 0.95;
     utterance.pitch = 1.0;
 
     utterance.onstart = () => {
@@ -272,10 +348,7 @@ export const StockProvider = ({ children }) => {
       return false;
     }
 
-    // Deduct cash
     const updatedCash = +(portfolio.cashUSD - totalCostUSD).toFixed(2);
-
-    // Update holdings
     const existingIndex = portfolio.holdings.findIndex(h => h.stockId === stock.id);
     let updatedHoldings = [...portfolio.holdings];
 
@@ -301,7 +374,6 @@ export const StockProvider = ({ children }) => {
       });
     }
 
-    // Record transaction
     const newTx = {
       id: `tx-${Date.now()}`,
       type: 'BUY',
@@ -318,15 +390,14 @@ export const StockProvider = ({ children }) => {
       transactions: [newTx, ...portfolio.transactions]
     });
 
-    // Trigger celebratory confetti!
     try {
       confetti({
-        particleCount: 80,
+        particleCount: 85,
         spread: 70,
         origin: { y: 0.6 }
       });
-    } catch {
-      // Fallback
+    } catch (e) {
+      // Confetti fallback
     }
 
     return true;
@@ -381,12 +452,11 @@ export const StockProvider = ({ children }) => {
     return true;
   };
 
-  // ADMIN ACTIONS
+  // Admin Actions
   const updateStock = (stockId, fields) => {
     setStocks(prev => prev.map(s => {
       if (s.id === stockId) {
         const updated = { ...s, ...fields };
-        // Recalculate INR if priceUSD changed
         if (fields.priceUSD && !fields.priceINR) {
           updated.priceINR = +(fields.priceUSD * USD_TO_INR).toFixed(2);
         }
@@ -403,12 +473,14 @@ export const StockProvider = ({ children }) => {
       ...newStock,
       id,
       priceINR,
+      dayOpenPrice: newStock.priceUSD,
       changePercent: newStock.changePercent || 0,
       change: newStock.change || 0,
       isPositive: (newStock.change || 0) >= 0,
+      momentum: { trend: 'up', remainingTicks: 12 },
       sparkline: [newStock.priceUSD * 0.95, newStock.priceUSD * 0.97, newStock.priceUSD * 0.98, newStock.priceUSD, newStock.priceUSD],
       history: {
-        '1D': [{ time: 'Open', price: newStock.priceUSD * 0.98 }, { time: 'Close', price: newStock.priceUSD }],
+        '1D': [{ time: '9:30 AM', price: newStock.priceUSD * 0.98 }, { time: 'Now', price: newStock.priceUSD }],
         '1W': [{ time: 'Mon', price: newStock.priceUSD * 0.95 }, { time: 'Now', price: newStock.priceUSD }],
         '1M': [{ time: 'W1', price: newStock.priceUSD * 0.92 }, { time: 'Now', price: newStock.priceUSD }],
         '1Y': [{ time: 'Start', price: newStock.priceUSD * 0.8 }, { time: 'Now', price: newStock.priceUSD }],
@@ -434,13 +506,13 @@ export const StockProvider = ({ children }) => {
 
   const updateBroadcast = (broadcast) => {
     setSystemBroadcast(broadcast);
+    setAllBroadcasts(prev => [broadcast, ...prev.filter(b => b.id !== broadcast.id)]);
   };
 
   const updateUserStatus = (userId, status) => {
     setAdminUsers(prev => prev.map(u => u.id === userId ? { ...u, status } : u));
   };
 
-  // Font size multiplier class helper
   const getFontSizeClass = () => {
     if (fontSizeMode === 'large') return 'text-lg';
     if (fontSizeMode === 'xl') return 'text-xl';
@@ -472,6 +544,7 @@ export const StockProvider = ({ children }) => {
         adminUsers,
         updateUserStatus,
         systemBroadcast,
+        allBroadcasts,
         updateBroadcast,
         portfolio,
         favorites,
@@ -479,6 +552,7 @@ export const StockProvider = ({ children }) => {
         speakingId,
         isSpeaking,
         speakText,
+        speakStockAdvice,
         stopSpeaking,
         buyModal,
         openBuyModal,

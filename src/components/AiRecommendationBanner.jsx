@@ -11,6 +11,7 @@ export const AiRecommendationBanner = () => {
     favorites,
     toggleFavorite,
     speakText,
+    speakStockAdvice,
     isSpeaking,
     speakingId,
     formatStockPrice
@@ -22,12 +23,12 @@ export const AiRecommendationBanner = () => {
 
   if (!featured) return null;
 
-  const isCurrentSpeaking = speakingId === `ai-banner-${featured.id}` && isSpeaking;
+  const isCurrentSpeaking = speakingId === `stock-${featured.id}` && isSpeaking;
   const isFav = favorites.includes(featured.id);
 
   const handleListen = (e) => {
     e.stopPropagation();
-    speakText(featured.audioSummary || `${featured.name} is performing well today with an AI buy score of ${featured.aiScore} percent.`, `ai-banner-${featured.id}`);
+    speakStockAdvice(featured);
   };
 
   return (
